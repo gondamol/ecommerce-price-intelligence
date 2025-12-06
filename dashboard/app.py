@@ -12,9 +12,31 @@ from datetime import datetime, timedelta
 import json
 from pathlib import Path
 
+import os
+
 # Data directory
-DATA_DIR = Path(__file__).parent.parent / "data" / "processed"
-SCRAPED_DIR = Path(__file__).parent.parent / "data" / "scraped"
+# Try to find the data directory
+current_dir = Path(__file__).parent
+root_dir = current_dir.parent
+data_dir_candidates = [
+    root_dir / "data",              # Local development
+    Path("data"),                   # Streamlit Cloud (CWD=root)
+    Path("../data"),                # Fallback
+    current_dir / "data"            # Fallback
+]
+
+DATA_DIR = None
+for d in data_dir_candidates:
+    if d.exists():
+        DATA_DIR = d
+        break
+
+if DATA_DIR is None:
+    st.error("Could not find data directory. Please check deployment structure.")
+    st.stop()
+
+PROCESSED_DIR = DATA_DIR / "processed"
+SCRAPED_DIR = DATA_DIR / "scraped"
 
 # Page config
 st.set_page_config(
@@ -94,7 +116,7 @@ def load_data():
     
     try:
         # Load products
-        products_file = DATA_DIR / "products.json"
+        products_file = PROCESSED_DIR / "products.json"
         if not products_file.exists():
             products_file = SCRAPED_DIR / "products_latest.json"
         
@@ -105,7 +127,7 @@ def load_data():
             data['products'] = []
         
         # Load stats
-        stats_file = DATA_DIR / "stats.json"
+        stats_file = PROCESSED_DIR / "stats.json"
         if stats_file.exists():
             with open(stats_file) as f:
                 data['stats'] = json.load(f)
